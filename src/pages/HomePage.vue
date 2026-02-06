@@ -5,14 +5,13 @@
     <q-input v-model="editingTask.label" label="Заголовок" dark stack-label class="q-mb-sm" />
     <q-input v-model="editingTask.description" label="Описание" type="textarea" dark stack-label class="q-mb-sm" />
     <q-input v-model.number="editingTask.durationHours" type="number" label="Длительность (ч)" dark stack-label />
-
     <q-btn label="Закрыть" color="primary" class="full-width q-mt-md" @click="drawerOpen = false" />
   </div>
 </q-drawer>
   <q-page class="sequence-page q-pa-lg">
 
     <div class="row q-gutter-md q-mb-md items-center">
-      <q-btn color="primary" icon="add" label="Добавить клип" @click="addNewClip" />
+
 
       <q-separator vertical dark inset />
 
@@ -23,7 +22,7 @@
         <q-btn flat dense color="white" icon="add" @click="totalDays++" />
       </div>
 
-      <div class="row items-center q-gutter-md bg-grey-9 q-px-md q-py-xs rounded-borders" style="min-width: 250px">
+      <div class=" bg-grey-9 q-px-md q-py-xs rounded-borders" style="min-width: 250px">
         <span class="text-caption text-grey-5">Зум:</span>
         <q-slider
           v-model="dayWidth"
@@ -35,17 +34,19 @@
         />
       </div>
 
-      <q-btn outline color="deep-orange-5" icon="layers" label="Добавить дорожку" @click="addTrack" />
     </div>
 
     <div class="editor-container shadow-24">
+      <q-toolbar>
+        <q-btn color="primary" icon="add" label="Клип" @click="addNewClip" />
+        <q-btn outline color="deep-orange-5" icon="layers" label="Дорожка" @click="addTrack" />
+      </q-toolbar>
       <SequenceEditor
         v-model:tasks="myTasks"
         v-model:groups="myGroups"
         :groups="myGroups"
         :days="dateRange"
         :day-width="dayWidth"
-        @request-delete-group="confirmDeleteGroup"
         @request-delete-task="confirmDeleteTask"
         @edit-task="openEditDrawer"
         @change="onEditorChange"
@@ -116,54 +117,6 @@ const addNewClip = () => {
     color: myGroups.value[0].color
   })
 }
-
-const addTrack = () => {
-  const newId = myGroups.value.length
-  myGroups.value.push({
-    id: newId,
-    name: `Layer ${newId + 1}`,
-    icon: 'layers',
-    color: '#5c6bc0'
-  })
-}
-
-// --- Удаление дорожки ---
-const confirmDeleteGroup = ({ index, group }) => {
-  /*
-  $q.dialog({
-    title: 'Удаление дорожки',
-    message: `Вы уверены, что хотите удалить дорожку "${group.name}"? Все клипы на ней также будут удалены.`,
-    cancel: true,
-    persistent: true,
-    ok: { color: 'negative', label: 'Удалить' }
-  }).onOk(() => {
-    // 1. Удаляем задачи, привязанные к этой дорожке*/
-    myTasks.value = myTasks.value.filter(t => t.trackIndex !== index);
-
-    // 2. Сдвигаем trackIndex у всех задач, которые были ниже удаляемой дорожки
-    myTasks.value = myTasks.value.map(t => {
-      if (t.trackIndex > index) return { ...t, trackIndex: t.trackIndex - 1 };
-      return t;
-    });
-
-    // 3. Удаляем саму дорожку
-    myGroups.value.splice(index, 1);
- // });
-};
-
-// --- Удаление клипа ---
-const confirmDeleteTask = (taskId) => {
- /*
-  $q.dialog({
-    title: 'Удалить клип?',
-    message: 'Это действие нельзя отменить.',
-    cancel: true,
-    ok: { color: 'negative' }
-  }).onOk(() => {*/
-    myTasks.value = myTasks.value.filter(t => t.id !== taskId);
-  //});
-};
-
 // --- Редактирование ---
 const openEditDrawer = (task) => {
   editingTask.value = task; // Ссылка на объект (реактивно обновится в редакторе)
