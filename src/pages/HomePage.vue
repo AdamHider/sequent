@@ -26,8 +26,8 @@
         <span class="text-caption text-grey-5">Зум:</span>
         <q-slider
           v-model="dayWidth"
-          :min="100"
-          :max="400"
+          :min="20"
+          :max="1000"
           :step="10"
           color="indigo-4"
           dark
@@ -47,9 +47,6 @@
         :groups="myGroups"
         :days="dateRange"
         :day-width="dayWidth"
-        @request-delete-task="confirmDeleteTask"
-        @edit-task="openEditDrawer"
-        @change="onEditorChange"
       />
     </div>
 
@@ -64,6 +61,8 @@
 <script setup>
 import { ref } from 'vue'
 import SequenceEditor from '../components/SequenceEditor.vue'
+import { useTracks } from '../composables/useTracks';
+import { useTasks } from '../composables/useTasks';
 
 const drawerOpen = ref(false);
 const editingTask = ref(null);
@@ -103,28 +102,11 @@ const myTasks = ref([
     color: '#3949ab'
   }
 ])
+const { addTrack } = useTracks(myGroups, myTasks);
+const { addTask } = useTasks(myTasks, myGroups);
 
-const addNewClip = () => {
-  const newId = Date.now()
-  // Добавляем новый клип в начало таймлайна на первую дорожку
-  myTasks.value.push({
-    id: newId,
-    label: 'Clip_' + newId.toString().slice(-4),
-    trackIndex: 0, // Первая дорожка
-    startDay: 0,   // Первый день
-    startHour: 4,  // 4 часа утра
-    durationHours: 12, // Длительность 12 часов
-    color: myGroups.value[0].color
-  })
-}
-// --- Редактирование ---
-const openEditDrawer = (task) => {
-  editingTask.value = task; // Ссылка на объект (реактивно обновится в редакторе)
-  drawerOpen.value = true;
-};
-const onEditorChange = (updatedTasks) => {
-  console.log('Данные синхронизированы:', updatedTasks)
-}
+const addNewClip = () => addTask(0, 8); // Добавить на 0 дорожку в 8 утра
+
 </script>
 
 <style scoped lang="scss">

@@ -9,18 +9,12 @@
         @edit-track="$emit('edit-track', $event)"
         ref="sidebarScroll"
       />
-      <div class="dates-bar bg-grey-10 border-bottom overflow-hidden" ref="headerScroll">
-        <div class="flex no-wrap" :style="{ width: contentWidth + 'px'}">
-          <div v-for="(day, index) in dayScale" :key="day.fullDate"
-              class="day-header border-right flex column justify-center items-center no-shrink"
-              :style="{ width: dayWidth + 'px', minWidth: dayWidth + 'px' }">
-            <div class="text-caption text-uppercase text-grey-5" style="font-size: 0.65rem">
-              {{ day.weekday }}
-            </div>
-            <div class="text-bold text-white">{{ day.label }}</div>
-          </div>
-        </div>
-      </div>
+      <TimelineDatesBar
+        :days="days"
+        :day-width="dayWidth"
+        :content-width="contentWidth"
+        ref="headerScroll"
+      />
       <div class="timeline-view overflow-auto" @scroll="syncScrolls" ref="mainScroll">
         <div class="timeline-content relative-position" :style="contentSizeStyle">
           <TimelineGrid :groups="groups" :track-height="trackHeight" :day-width="dayWidth" />
@@ -28,16 +22,14 @@
           <TimelineTask
             v-for="task in tasks"
             :key="task.id"
-            :id="'task-' + task.id"
+            v-model:tasks="localTasks"
             :task="task"
+            :tasks="tasks"
             :is-dragging="draggingId === task.id"
             :x="getTaskX(task)"
             :width="getTaskWidth(task)"
             :height="trackHeight - 10"
-            @edit="editTask"
-            @delete="deleteTask"
           />
-
         </div>
       </div>
     </div>
@@ -45,10 +37,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from "vue";
+import { ref, onMounted, computed, onBeforeUnmount, nextTick , watch } from "vue";
 import TimelineTask from "./TimelineTask.vue";
-import TimelineGrid from "./TimelineGrid.vue"; // Его тоже можно выделить
-import TracksSidebar from "./TracksSidebar.vue"; // Его тоже можно выделить
+import TimelineGrid from "./TimelineGrid.vue";
+import TracksSidebar from "./TracksSidebar.vue";
+import TimelineDatesBar from "./TimelineDatesBar.vue";
+
 import { useTimelineCoords } from "../composables/useTimelineCoords";
 import { draggingId, activeGuides } from "../scripts/timelineState";
 import { useTimelineInteract } from "../composables/useTimelineInteract";
@@ -94,11 +88,6 @@ const localTasks = computed({
   set: (val) => emit('update:tasks', val)
 });
 
-const moveGroup = (index, dir) => emit('move-group', { index, dir });
-const insertGroup = (atIndex) => emit('insert-group', atIndex);
-const editGroup = (group) => emit('edit-group', group);
-const deleteGroup = (index) => emit('request-delete-group', { index, group: props.groups[index] });
-
 const { contentWidth, contentHeight, getTaskX, getTaskWidth, applyPixelsToTask } = useTimelineCoords(props);
 
 const contentSizeStyle = computed(() => ({
@@ -111,9 +100,15 @@ const mainScroll = ref(null)
 const headerScroll = ref(null)
 const sidebarScroll = ref(null)
 
+
 const syncScrolls = (e) => {
-  headerScroll.value.scrollLeft = e.target.scrollLeft;
-  sidebarScroll.value.scrollTop = e.target.scrollTop;
+  // Достаем нативный элемент через экспортированный ref
+  if (headerScroll.value?.$el) {
+    headerScroll.value.$el.scrollLeft = e.target.scrollLeft;
+  }
+  if (sidebarScroll.value?.$el) {
+    sidebarScroll.value.$el.scrollTop = e.target.scrollTop;
+  }
 };
 const updateGuides = (currentX, currentWidth) => {
   const currentRight = currentX + currentWidth;
@@ -143,27 +138,35 @@ const dayScale = computed(() => {
   }));
 });
 
-const deleteTask = (id) => {
-  emit('delete-task', id);
-};
-
-const editTask = (task) => {
-  emit('edit-task', task);
-};
-
 const { initInteract, destroyInteract } = useTimelineInteract(props, {
   mainScroll, getTaskX, getTaskWidth, applyPixelsToTask, updateGuides, emit
 });
 
 onMounted(initInteract);
 onBeforeUnmount(destroyInteract);
+// Следим за изменением зума
+watch(() => props.dayWidth, (newWidth, oldWidth) => {
+  if (!mainScroll.value || !oldWidth) return;
 
+  const scrollElement = mainScroll.value;
+  const currentScroll = scrollElement.scrollLeft;
+  const viewportWidth = scrollElement.clientWidth;
+
+  const focalPoint = currentScroll + (viewportWidth / 2);
+
+  const ratio = newWidth / oldWidth;
+
+  nextTick(() => {
+    const newScroll = (focalPoint * ratio) - (viewportWidth / 2);
+    scrollElement.scrollLeft = newScroll;
+  });
+});
 </script>
 <style scoped lang="scss">
 .editor-layout {
   display: grid;
   grid-template-columns: 140px 1fr;
-  grid-template-rows: 45px 1fr;
+  grid-template-rows: 45px 1fr 50px;
   height: 100%;
   width: 100%;
   user-select: none;
@@ -171,11 +174,6 @@ onBeforeUnmount(destroyInteract);
 
 .corner-bg {
   grid-column: 1;
-  grid-row: 1;
-}
-
-.dates-bar {
-  grid-column: 2;
   grid-row: 1;
 }
 
@@ -203,8 +201,4 @@ onBeforeUnmount(destroyInteract);
   background: #00e5ff; box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
   z-index: 50; pointer-events: none;
 }
-
-.border-right { border-right: 1px solid #2a2a2a; }
-.border-bottom { border-bottom: 1px solid #2a2a2a; }
-.dates-bar, .tracks-sidebar { &::-webkit-scrollbar { display: none; } }
 </style>

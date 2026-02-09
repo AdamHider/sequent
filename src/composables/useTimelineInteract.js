@@ -6,7 +6,6 @@ export function useTimelineInteract(props, refs) {
 
   let accumX = 0, accumY = 0, accumW = 0, grabOffset = 0, resizeAnchorX = 0;
 
-  // ДОБАВЛЯЕМ СЮДА: Определение rect относительно контейнера
   const getTimelineRect = () => {
     if (!mainScroll.value) return { left: 0, top: 0 };
     return mainScroll.value.querySelector('.timeline-content').getBoundingClientRect();
@@ -17,14 +16,13 @@ export function useTimelineInteract(props, refs) {
       .draggable({
         listeners: {
           start(event) {
-            const id = parseInt(event.target.id.replace('task-', ''));
+            // Используем Number() или parseFloat, так как id может быть дробным после Math.random()
+            const id = parseFloat(event.target.id.replace('task-', ''));
             const task = props.tasks.find(t => t.id === id);
             if (!task) return;
 
             draggingId.value = id;
-
             const timelineRect = getTimelineRect();
-            // Считаем отступ захвата с учетом скролла
             grabOffset = (event.clientX - timelineRect.left + mainScroll.value.scrollLeft) - getTaskX(task);
             accumY = task.trackIndex * props.trackHeight;
           },
@@ -33,7 +31,6 @@ export function useTimelineInteract(props, refs) {
             if (!task) return;
 
             const timelineRect = getTimelineRect();
-            // Вычисляем X без прыжков
             accumX = (event.clientX - timelineRect.left + mainScroll.value.scrollLeft) - grabOffset;
             accumY += event.dy;
 
@@ -49,7 +46,7 @@ export function useTimelineInteract(props, refs) {
         edges: { left: true, right: true },
         listeners: {
           start(event) {
-            const id = parseInt(event.target.id.replace('task-', ''));
+            const id = parseFloat(event.target.id.replace('task-', ''));
             const task = props.tasks.find(t => t.id === id);
             if (!task) return;
 
@@ -83,10 +80,14 @@ export function useTimelineInteract(props, refs) {
       });
   };
 
+  // ОСНОВНОЕ ИЗМЕНЕНИЕ ЗДЕСЬ
   const stopAction = () => {
     draggingId.value = null;
     activeGuides.value = [];
-    emit("change", props.tasks);
+    
+    // Вместо "change" отправляем "update:tasks", 
+    // создавая копию массива для триггера реактивности
+    emit("update:tasks", [...props.tasks]); 
   };
 
   const destroyInteract = () => {
