@@ -1,47 +1,29 @@
 <template>
-<q-drawer v-model="drawerOpen" side="right" bordered :width="300" class="bg-grey-10 text-white q-pa-md">
-  <div class="text-h6 q-mb-md">Редактирование клипа</div>
-  <div v-if="editingTask">
-    <q-input v-model="editingTask.label" label="Заголовок" dark stack-label class="q-mb-sm" />
-    <q-input v-model="editingTask.description" label="Описание" type="textarea" dark stack-label class="q-mb-sm" />
-    <q-input v-model.number="editingTask.durationHours" type="number" label="Длительность (ч)" dark stack-label />
-    <q-btn label="Закрыть" color="primary" class="full-width q-mt-md" @click="drawerOpen = false" />
-  </div>
-</q-drawer>
   <q-page class="sequence-page q-pa-lg">
-
     <div class="row q-gutter-md q-mb-md items-center">
-
-
       <q-separator vertical dark inset />
-
+      
       <div class="row items-center q-gutter-sm bg-grey-9 q-px-md q-py-xs rounded-borders">
-        <span class="text-caption text-grey-5">Дни:</span>
-        <q-btn flat dense color="white" icon="remove" @click="totalDays = Math.max(1, totalDays - 1)" />
-        <span class="text-weight-bold text-white">{{ totalDays }}</span>
-        <q-btn flat dense color="white" icon="add" @click="totalDays++" />
+        <span class="text-caption text-grey-5">Диапазон:</span>
+        
+        <q-input v-model="dateFrom" type="date" dark borderless dense class="date-input" />
+        
+        <q-icon name="arrow_forward" color="grey-7" size="xs" />
+        
+        <q-input v-model="dateTo" type="date" dark borderless dense class="date-input" />
+        
+        <q-badge outline color="primary" class="q-ml-sm">
+          {{ totalDays }} дн.
+        </q-badge>
       </div>
-
-      <div class=" bg-grey-9 q-px-md q-py-xs rounded-borders" style="min-width: 250px">
-        <span class="text-caption text-grey-5">Зум:</span>
-        <q-slider
-          v-model="dayWidth"
-          :min="20"
-          :max="1000"
-          :step="10"
-          color="indigo-4"
-          dark
-        />
-      </div>
-
     </div>
-
     <div class="editor-container shadow-24">
-      <q-toolbar>
-        <q-btn color="primary" icon="add" label="Клип" @click="addNewClip" />
-        <q-btn outline color="deep-orange-5" icon="layers" label="Дорожка" @click="addTrack" />
+      <q-toolbar class="q-gutter-sm q-ma-sm">
+        <q-btn color="grey-10" text-color="primary" icon="add" label="Клип" @click="addNewClip" />
+        <q-btn color="grey-10"  text-color="deep-orange-5" icon="add" label="Дорожка" @click="addTrack" />
       </q-toolbar>
       <SequenceEditor
+        ref="timelineRef"
         v-model:tasks="myTasks"
         v-model:groups="myGroups"
         :groups="myGroups"
@@ -54,59 +36,62 @@
       <div class="text-caption text-grey-6 q-mb-xs uppercase">Текущее состояние (Debug):</div>
       <pre class="text-indigo-2">{{ myTasks }}</pre>
     </div>
-
   </q-page>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import SequenceEditor from '../components/SequenceEditor.vue'
 import { useTracks } from '../composables/useTracks';
 import { useTasks } from '../composables/useTasks';
 
-const drawerOpen = ref(false);
-const editingTask = ref(null);
-// Параметры сетки
-const totalDays = ref(15)
+// 1. Управляем датами напрямую
+const dateFrom = ref('2026-02-01')
+const dateTo = ref('2026-02-15')
 const dayWidth = ref(150)
+
+const timelineRef = ref(null);
 
 const myGroups = ref([
   { id: 0, name: 'Video 1', icon: 'movie', color: '#3949ab' },
   { id: 1, name: 'Audio 1', icon: 'mic', color: '#43a047' }
 ])
 
-// В родительском компоненте App.vue
-const generateDateRange = () => {
+// 2. Генерируем массив дней на лету на основе выбранных дат
+const dateRange = computed(() => {
   const dates = [];
-  const today = new Date();
+  const start = new Date(dateFrom.value);
+  const end = new Date(dateTo.value);
 
-  // Генерируем от -7 до +7 (итого 15 дней)
-  for (let i = -7; i <= 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    // Сохраняем как ISO строку для стабильности пропсов
-    dates.push(d.toISOString().split('T')[0]);
+  // Создаем копию текущей даты для итерации
+  let current = new Date(start);
+
+  // Безопасный ограничитель, чтобы не зависнуть, если даты перепутаны
+  let safetyIncrement = 0;
+  while (current <= end && safetyIncrement < 366) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+    safetyIncrement++;
   }
   return dates;
-};
+});
 
-const dateRange = ref(generateDateRange());
+// 3. totalDays теперь вычисляется на основе длины массива
+const totalDays = computed(() => dateRange.value.length);
+
 const myTasks = ref([
-  {
-    id: 1,
-    label: 'Intro Clip',
-    trackIndex: 0, // Первая дорожка
-    startDay: 0,   // Первый день
-    startHour: 4,  // 4 часа утра
-    durationHours: 12, // Длительность 12 часов
-    color: '#3949ab'
-  }
+  { id: 1, label: 'Intro Clip', trackIndex: 0, startDay: 0, startHour: 4, durationHours: 12, color: '#3949ab' }
 ])
+
 const { addTrack } = useTracks(myGroups, myTasks);
 const { addTask } = useTasks(myTasks, myGroups);
 
-const addNewClip = () => addTask(0, 8); // Добавить на 0 дорожку в 8 утра
-
+const addNewClip = () => {
+  if (timelineRef.value) {
+    const center = timelineRef.value.getTimelineCenter();
+    addTask(center.trackIndex, center.hour, center.day);
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -116,7 +101,7 @@ const addNewClip = () => addTask(0, 8); // Добавить на 0 дорожк�
 }
 
 .editor-container {
-  height: 60vh; // Теперь редактор занимает 60% высоты экрана
+  height: 60vh;
   width: 100%;
   border-radius: 8px;
   overflow: hidden;

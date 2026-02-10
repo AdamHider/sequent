@@ -1,13 +1,13 @@
 <template>
   <div class="dates-bar bg-grey-10 border-bottom overflow-hidden" ref="headerScroll">
     <div class="flex no-wrap full-height" :style="{ width: contentWidth + 'px' }">
-      
+
       <div v-for="day in dayScale" :key="day.fullDate"
            class="day-header border-right flex column no-shrink relative-position overflow-hidden"
            :style="{ width: dayWidth + 'px', minWidth: dayWidth + 'px' }">
-        
-        <div class="flex column justify-center items-center full-height full-width q-pa-xs">
-          
+
+        <div class="flex column justify-center items-center full-height full-width">
+
           <template v-if="dayWidth < 100">
             <div class="text-week text-grey-6">{{ day.weekNum }}</div>
             <div class="text-bold text-white">{{ day.dayOfMonth }}</div>
@@ -26,11 +26,10 @@
             </div>
             <div class="hours-row flex no-wrap full-width justify-between">
               <div v-for="h in hourTicks" :key="h" class="hour-tick">
-                {{ h }}
+                <span class="hour"><span>{{ h }}</span></span>
               </div>
             </div>
           </template>
-
         </div>
       </div>
 
@@ -49,9 +48,9 @@ const props = defineProps({
 
 const headerScroll = ref(null);
 
-// Динамические метки часов для режима Micro-zoom
 const hourTicks = computed(() => {
-  if (props.dayWidth > 500) return [0, 3, 6, 9, 12, 15, 18, 21];
+  if (props.dayWidth > 500) return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,21, 22, 23];
+  if (props.dayWidth > 300) return [0, 3, 6, 9, 12, 15, 18, 21];
   return [0, 6, 12, 18];
 });
 
@@ -59,8 +58,6 @@ const dayScale = computed(() => {
   if (!props.days || props.days.length === 0) return [];
   return props.days.map(d => {
     const date = new Date(d);
-    
-    // Номер недели
     const firstDay = new Date(date.getFullYear(), 0, 1);
     const weekNum = Math.ceil((((date - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
 
@@ -81,9 +78,10 @@ defineExpose({ $el: headerScroll });
 .dates-bar {
   grid-column: 2;
   grid-row: 1;
-  height: 45px; // Фиксированная высота как просили
+  height: 45px;
   background: #121212;
   user-select: none;
+  margin-left: 1px;
 }
 
 .day-header {
@@ -99,23 +97,29 @@ defineExpose({ $el: headerScroll });
 
 .hours-row {
   width: 100%;
-  padding: 0 2px;
 }
 
 .hour-tick {
+  width: 100%;
+  height: 20px;
   font-size: 9px;
   color: #666;
   position: relative;
-  
-  // Маленькая черточка под цифрой часа
-  &::after {
-    content: '';
+  box-shadow: 1px -1px 0 0 #2a2a2a;
+  padding: 3px;
+  &:first-child{
+    margin-left: -1px;
+    span{
+      opacity: 0;
+    }
+  }
+  .hour{
     position: absolute;
-    bottom: -4px;
-    left: 50%;
-    width: 1px;
-    height: 3px;
-    background: #444;
+    left: -50%;
+    background: #1a1a1a;
+    top: 0;
+    width: 100%;
+    text-align: center;
   }
 }
 

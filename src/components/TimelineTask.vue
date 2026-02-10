@@ -1,9 +1,11 @@
 <template>
   <div
     :id="'task-' + task.id"
-    class="task-block shadow-10 rounded-borders"
+    :data-id="'task-' + task.id"
+    class="task-block shadow-10 rounded-borders no-select no-select"
     :class="{ 'is-dragging': isDragging }"
     :style="taskStyle"
+
   >
     <div class="resizer-left"></div>
 
@@ -108,16 +110,14 @@ const saveTask = () => {
   emit('update:tasks', newTasks);
 };
 
-// --- МЕТОДЫ-ОБЕРТКИ ДЛЯ ШАБЛОНА ---
 const onDuplicate = () => {
   duplicateTask(props.task);
 };
 
 const onRemove = () => {
-  deleteTask(props.task.id); // Вызываем общую логику из useTasks
+  deleteTask(props.task.id);
 };
 
-// --- ВЫЧИСЛЕНИЯ (Стили и Время) ---
 const taskStyle = computed(() => ({
   transform: `translate(${props.x}px, ${props.task.trackIndex * (props.height + 10)}px)`,
   width: `${props.width}px`,

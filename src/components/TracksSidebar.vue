@@ -112,3 +112,8 @@ const saveTrackEdit = () => {
   emit('update:tasks', newTasks);
 };
 </script>
+<style scoped>
+.track-label{
+  border-bottom: 1px solid #2a2a2a;
+}
+</style>

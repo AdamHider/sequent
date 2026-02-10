@@ -1,11 +1,12 @@
 export function useTasks(tasks, groups) {
-  const addTask = (trackIndex = 0, startHour = 4) => {
+  const addTask = (trackIndex = 0, startHour = 4, startDay = 0) => {
     const newId = Date.now() + Math.random();
+    
     tasks.value.push({
       id: newId,
       label: 'New Clip',
       trackIndex,
-      startDay: 0,
+      startDay,
       startHour,
       durationHours: 12,
       color: groups.value[trackIndex]?.color || '#3949ab'
